@@ -181,7 +181,7 @@ A HFT Bot built using Alpaca API. Trading strategy implemented in this project:
   
   If our market position is open (i.e we do not hold any stocks in our portfolio), we place a buy order. 
   
-  If we hold a position (i.e we have a stock in our portfolio), we check for returns. If returns >= 1%, we sell the current stock and buy the stock that we just found out satisfies all our criterias.
+  If we hold a position (i.e we have a stock in our portfolio), we check for returns. If returns >= 2%, we sell the current stock and buy the stock that we just found out satisfies all our criterias.
   
  ```
  def buy(stock_to_buy: str):
