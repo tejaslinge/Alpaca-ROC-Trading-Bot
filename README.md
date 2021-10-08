@@ -5,7 +5,7 @@ A HFT Bot built using Alpaca API. Trading strategy implemented in this project:
 1. Calculate rate of change (ROC) of ***ask_price*** of all stocks for last 1 min timeframe from a list (list contains tickers of all stocks you want to watch out for).
 2. For the stock with highest ROC (let's call it S_1), compare *ask_price* and *last_traded_price* (LTP) for 1 minute timeframe (if an order is not yet placed using this bot, timeframe for the 1st trade ever will be 30 mins, then 1 min for every trade after 1st trade is placed). 
 3. If, for S_1, **ask_price > LTP**, **BUY S_1 with 100% capital allocation**. Else compare ASK and LTP for stock with 2nd highest ROC (S_2), and repeat step 3 till we find a stock with **ASK > LTP** in the ROC sorted list. 
-4. Sell after 1% gain.
+4. Sell after 2% gain.
 5. Repeat steps 1-4.
 
 # Steps to building the Alpaca Trading Bot 
@@ -101,7 +101,7 @@ A HFT Bot built using Alpaca API. Trading strategy implemented in this project:
 ```
 
 
-5. Following functions calculates ROC for all tickers in our list, compares ASK vs LTP prices, and returns the stock ticker which satisfies all our criterias.
+5. **Following functions calculates ROC for all tickers in our list, compares ASK vs LTP prices, and returns the stock ticker which satisfies all our criterias.**
 
  ```
  def ROC(ask, timeframe):
@@ -177,7 +177,7 @@ A HFT Bot built using Alpaca API. Trading strategy implemented in this project:
      return stock
 ```
 
-6. After we find the ticker which satisfies all the criterias, we place a buy/sell order depending on our market position. 
+6. **After we find the ticker which satisfies all the criterias, we place a buy/sell order depending on our market position.**
   
   If our market position is open (i.e we do not hold any stocks in our portfolio), we place a buy order. 
   
@@ -271,3 +271,46 @@ A HFT Bot built using Alpaca API. Trading strategy implemented in this project:
 ```
 
 *NOTE: **mail_alert** function notifies the bot user via mail whenever an order is placed.*
+
+7. **main() function** 
+ ```
+ def main():
+
+     while True:
+         if api.get_clock().is_open == True:
+
+             # check if we have made the first ever trade yet, if yes, timeframe = 1 min, else trade at 10:00 am
+             if os.path.isfile('FirstTrade.csv'):
+                 get_minute_data(tickers)
+                 stock_to_buy = algo(tickers)
+
+                 if len(api.list_positions()) == 0:
+                     mail_content = buy(stock_to_buy)
+                     mail_alert(mail_content, 5)
+                     continue
+
+                 else:
+                     current_stock = api.list_positions()[0].symbol
+                     mail_content = check_rets(current_stock, stock_to_buy)
+
+                     if mail_content == 0:
+                         continue
+
+                     if len(api.list_positions()) == 0:
+                         mail_alert(mail_content, 0)    
+                         mail_content = buy(stock_to_buy)
+                         mail_alert(mail_content, 5)
+                         # time.sleep(5)
+             else:
+                 get_past30_data(tickers)
+                 stock_to_buy = algo(tickers)
+                 mail_content = buy(stock_to_buy)
+                 mail_alert(mail_content, 5)
+                 df = pd.DataFrame()
+                 df['First Stok'] = stock_to_buy
+                 df.to_csv('FirstTrade.csv')
+```
+
+ 1. Checks if *FirstTrade.csv* exists (i.e if we are using the bot for the first time). Exists if we've made the first trade, else not.
+ 2. 3. If *FirstTrade.csv* does not exist, we check criterias for first 30 mins when market opens, find **stock_to_buy** using **algo** function, and place a buy order.
+ 3. If *FirstTrade.csv* exists, bot fetches data for 1-min timeframe, checks for criterias with **algo** function and saves as variable **stock_to_buy**. If we have a open position (*len(api.list_positions()) == 0*), bot places a **buy** order for **stock_to_buy** and sends a buy order mail alert to user. If we do not have an open position, bot checks for returns. If returns >= 2%, bot sells the current stock in portfolio and buys **stock_to_buy**, sends mail alert for sell and buy trades. If return is not >= 2%, bot repeats step 3.
