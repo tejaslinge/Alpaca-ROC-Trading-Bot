@@ -30,7 +30,7 @@ A HFT Bot built using Alpaca API. Trading strategy implemented in this project:
   tickers = tickers.upper().split()
 ```
 
-4. **Get data for all tickers in our list using Alpaca API**
+4. **Get data for all tickers in our list using Alpaca API and save as .csv files for checking our criterias**
   ```
   def get_minute_data(tickers):
 
@@ -53,3 +53,47 @@ A HFT Bot built using Alpaca API. Trading strategy implemented in this project:
       for ticker in tickers:
           save_min_data(ticker)
 ```
+*NOTE: This function will run periodically to fetch real-time market data for checking criterias.*
+*NOTE 2: If bot hasn't placed any trade yet (i.e trading for the first time), it will run a different function (since, for the first time, we won't calculate ROC and compare ASK vs LTP for 1-minute timeframe, but for 30 mins)
+
+*This function will run to fetch data for the first time*
+
+```
+ def get_past30_data(tickers):
+
+     def save_30_data(ticker):
+         prices_1 = api.get_trades(str(ticker), start = ((dt.now().astimezone(timezone('America/New_York'))) - timedelta(minutes=30)).isoformat(),
+                                         end = ((dt.now().astimezone(timezone('America/New_York'))) - timedelta(minutes=28)).isoformat(), 
+                                         limit = 10000).df[['price']]
+         prices_2 = api.get_trades(str(ticker), start = ((dt.now().astimezone(timezone('America/New_York'))) - timedelta(minutes=2)).isoformat(),
+                                         end = ((dt.now().astimezone(timezone('America/New_York')))).isoformat(), 
+                                         limit = 10000).df[['price']]
+
+         prices_1.index = pd.to_datetime(prices_1.index, format = '%Y-%m-%d').strftime('%Y-%m-%d %H:%M')
+         prices_2.index = pd.to_datetime(prices_2.index, format = '%Y-%m-%d').strftime('%Y-%m-%d %H:%M')
+
+         prices = pd.concat([prices_1, prices_2])
+         prices = prices[~prices.index.duplicated(keep='last')]
+
+         quotes_1 = api.get_quotes(str(ticker), start = ((dt.now().astimezone(timezone('America/New_York'))) - timedelta(minutes=30)).isoformat(),
+                                         end = ((dt.now().astimezone(timezone('America/New_York'))) - timedelta(minutes=28)).isoformat(), 
+                                         limit = 10000).df[['ask_price']]
+         quotes_2 = api.get_quotes(str(ticker), start = ((dt.now().astimezone(timezone('America/New_York'))) - timedelta(minutes=2)).isoformat(),
+                                         end = ((dt.now().astimezone(timezone('America/New_York')))).isoformat(), 
+                                         limit = 10000).df[['ask_price']]
+
+         quotes_1.index = pd.to_datetime(quotes_1.index, format = '%Y-%m-%d').strftime('%Y-%m-%d %H:%M')
+         quotes_2.index = pd.to_datetime(quotes_2.index, format = '%Y-%m-%d').strftime('%Y-%m-%d %H:%M')
+
+         quotes = pd.concat([quotes_1, quotes_2])
+         quotes = quotes[~quotes.index.duplicated(keep='last')]
+
+         df = pd.merge(prices, quotes, how= 'inner', left_index=True, right_index= True)
+         df.to_csv('{}.csv'.format(ticker))
+
+     for ticker in tickers:
+         save_30_data(ticker)
+
+```
+
+5. 
