@@ -314,3 +314,8 @@ A HFT Bot built using Alpaca API. Trading strategy implemented in this project:
  1. Checks if *FirstTrade.csv* exists (i.e if we are using the bot for the first time). Exists if we've made the first trade, else not.
  2. If *FirstTrade.csv* does not exist, we check criterias for first 30 mins when market opens, find **stock_to_buy** using **algo** function, and place a buy order.
  3. If *FirstTrade.csv* exists, bot fetches data for 1-min timeframe, checks for criterias with **algo** function and saves as variable **stock_to_buy**. If we have a open position (*len(api.list_positions()) == 0*), bot places a **buy** order for **stock_to_buy** and sends a buy order mail alert to user. If we do not have an open position, bot checks for returns. If returns >= 2%, bot sells the current stock in portfolio and buys **stock_to_buy**, sends mail alert for sell and buy trades. If return is not >= 2%, bot repeats step 3.
+
+# Resources
+
+1. Building an Alpaca Trading Bot in 7 steps: https://alpaca.markets/learn/algorithmic-trading-bot-7-steps/
+2. Alpaca Trading API Guide: https://algotrading101.com/learn/alpaca-trading-api-guide/
