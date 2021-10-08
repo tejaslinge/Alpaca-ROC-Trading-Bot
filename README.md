@@ -11,9 +11,12 @@ A HFT Bot built using Alpaca API. Trading strategy implemented in this project:
 # Steps to building the Alpaca Trading Bot 
 
 1. **Getting started with Alpaca**
+
   **Create an account with Alpaca**: You can either sign up for a live account or a paper trading account to get started. Navigate to the Alpaca home page – https://alpaca.markets/ and click on Sign up.
-  **Get an API Key**: After creating an account, log in to view your API key and secret key. The endpoint used to make calls to the REST API should also be displayed. Take note of all three of these values and save in ***auth.txt*** file as key-value pairs.
-  **Install the Alpaca Python Library**: Alpaca has a library, otherwise known as the client SDK, which simplifies connecting to the API. To install it, type in ***pip3 install alpaca-trade-api*** from your command prompt. 
+
+ **Get an API Key**: After creating an account, log in to view your API key and secret key. The endpoint used to make calls to the REST API should also be displayed. Take note of all three of these values and save in ***auth.txt*** file as key-value pairs.
+
+ **Install the Alpaca Python Library**: Alpaca has a library, otherwise known as the client SDK, which simplifies connecting to the API. To install it, type in ***pip3 install alpaca-trade-api*** from your command prompt. 
   
 2. **Connect to Alpaca API using your API Key**
 ```
