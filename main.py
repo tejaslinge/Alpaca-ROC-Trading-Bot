@@ -213,9 +213,9 @@ def check_rets(current_stock, stock_to_buy):
 
 def mail_alert(mail_content, sleep_time):
     # The mail addresses and password
-    sender_address = 'sender_address@email.com'
-    sender_pass = 'sender_password'
-    receiver_address = 'receiver_address@email.com'
+    sender_address = 'sharifbilal010@gmail.com'
+    sender_pass = 'Forbilal123'
+    receiver_address = 'sharifbilal136@gmail.com'
 
     # Setup MIME
     message = MIMEMultipart()
@@ -238,11 +238,18 @@ def mail_alert(mail_content, sleep_time):
     time.sleep(sleep_time)
 
 def main():
-    
+    mail_start = 0
     while True:
         try:
             if api.get_clock().is_open == True:
-
+                
+                # sends mail when bot starts running
+                if mail_start == 0:
+                    mail_content = 'The bot started running on {} at {}'.format(dt.now().strftime('%Y-%m-%d'), dt.now().strftime('%H:%M:%S'))
+                    mail_alert(mail_content, 0)
+                    mail_start += 1
+                else: pass
+                
                 # check if we have made the first ever trade yet, if yes, timeframe = 1 min, else trade at 10:00 am
                 if os.path.isfile('FirstTrade.csv'):
                     get_minute_data(tickers)
@@ -287,6 +294,8 @@ def main():
                 if api.get_clock().is_open == True:
                     continue
                 else:
+                    mail_content = 'The market is closed on {}'.format(dt.now().strftime('%Y-%m-%d'))
+                    mail_alert(mail_content, 0)
                     break
         except:
             continue
