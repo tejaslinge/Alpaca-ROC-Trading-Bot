@@ -106,7 +106,6 @@ def compare_ask_ltp(tickers, timeframe):
             
             if max_ROC <= 0:
                 return 0
-            else: pass
             max_ROC_index = ROCs.index(max_ROC)
 
             for i in range(len(tickers)):
@@ -216,7 +215,7 @@ def check_rets(current_stock, stock_to_buy):
 def mail_alert(mail_content, sleep_time):
     # The mail addresses and password
     sender_address = 'sender_address@email.com'
-    sender_pass = 'sender_password'
+    sender_pass = 'sender_pw'
     receiver_address = 'receiver_address@email.com'
 
     # Setup MIME
@@ -240,17 +239,15 @@ def mail_alert(mail_content, sleep_time):
     time.sleep(sleep_time)
 
 def main():
-    mail_start = 0    
+    
+    if api.get_clock().is_open == True:
+    # sends mail when bot starts running
+        mail_content = 'The bot started running on {} at {} UTC'.format(dt.now().strftime('%Y-%m-%d'), dt.now().strftime('%H:%M:%S'))
+        mail_alert(mail_content, 0)
+
     while True:
         try:
             if api.get_clock().is_open == True:
-                # sends mail when bot starts running
-                if mail_start == 0:
-                    mail_content = 'The bot started running on {} at {}'.format(dt.now().strftime('%Y-%m-%d'), dt.now().strftime('%H:%M:%S'))
-                    mail_alert(mail_content, 0)
-                    mail_start += 1
-                else: pass
-                
                 # check if we have made the first ever trade yet, if yes, timeframe = 1 min, else trade at 10:00 am
                 if os.path.isfile('FirstTrade.csv'):
                     get_minute_data(tickers)
@@ -264,7 +261,6 @@ def main():
                             pass
                         if stock_to_buy == 0:
                             continue
-                        else: pass
                         mail_content = buy(stock_to_buy)
                         mail_alert(mail_content, 5)
                         continue
@@ -281,8 +277,6 @@ def main():
     
                             if stock_to_buy == 0:
                                 continue
-                            else: pass
-                    
                             mail_content = buy(stock_to_buy)
                             mail_alert(mail_content, 5)
                             # time.sleep(5)
@@ -296,9 +290,6 @@ def main():
                     
                     if stock_to_buy == 0:
                         continue
-                    else:
-                        pass
-                    
                     mail_content = buy(stock_to_buy)
                     mail_alert(mail_content, 5)
                     df = pd.DataFrame()
@@ -314,6 +305,11 @@ def main():
                     break
         except:
             continue
+
+    if api.get_clock().is_open == False:
+        # sends mail when bot starts running
+        mail_content = 'The bot stopped running on {} at {} UTC'.format(dt.now().strftime('%Y-%m-%d'), dt.now().strftime('%H:%M:%S'))
+        mail_alert(mail_content, 0)
             
 if __name__ == '__main__':
     main()
