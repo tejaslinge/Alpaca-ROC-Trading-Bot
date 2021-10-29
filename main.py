@@ -131,7 +131,7 @@ def compare_ask_ltp(tickers, timeframe):
                     tickers.pop(max_ROC_index)
                     ROCs.pop(max_ROC_index)
                     if(len(tickers)==0):
-                        break
+                        return -1
                     max_ROC = max(ROCs)
                     max_ROC_index =  ROCs.index(max_ROC)
         else: tickers = TICKERS
@@ -246,6 +246,7 @@ def main():
         mail_alert(mail_content, 0)
 
     while True:
+        tickers = TICKERS
         try:
             if api.get_clock().is_open == True:
                 # check if we have made the first ever trade yet, if yes, timeframe = 1 min, else trade at 10:00 am
@@ -260,6 +261,10 @@ def main():
                         except:
                             pass
                         if stock_to_buy == 0:
+                            print('All ROCs are <= 0')
+                            continue
+                        elif stock_to_buy == -1:
+                            print('All Ask < LTP')
                             continue
                         mail_content = buy(stock_to_buy)
                         mail_alert(mail_content, 5)
@@ -274,8 +279,11 @@ def main():
                             mail_alert(mail_content, 0)    
     #                         api.close_all_positions()
     #                         sell(current_stock, stock_to_buy)
-    
                             if stock_to_buy == 0:
+                                print('All ROCs are <= 0')
+                                continue
+                            elif stock_to_buy == -1:
+                                print('All Ask < LTP')
                                 continue
                             mail_content = buy(stock_to_buy)
                             mail_alert(mail_content, 5)
@@ -289,6 +297,10 @@ def main():
                     stock_to_buy = algo(tickers)
                     
                     if stock_to_buy == 0:
+                        print('All ROCs are <= 0')
+                        continue
+                    elif stock_to_buy == -1:
+                        print('All Ask < LTP')
                         continue
                     mail_content = buy(stock_to_buy)
                     mail_alert(mail_content, 5)
