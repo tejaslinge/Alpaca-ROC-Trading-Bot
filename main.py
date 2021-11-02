@@ -14,9 +14,9 @@ from email.mime.text import MIMEText
 from datetime import timedelta
 import os.path
 
-key = json.loads(open('AUTH/auth.txt', 'r').read())
-api = alpaca.REST(key['APCA-API-KEY-ID'], key['APCA-API-SECRET-KEY'], base_url='https://paper-api.alpaca.markets', api_version = 'v2')
-tickers = open('AUTH/Tickers.txt', 'r').read()
+key = json.loads(open('/home/Bilal/alpacaBOT/AUTH/auth.txt', 'r').read())
+api = alpaca.REST(key['APCA-API-KEY-ID'], key['APCA-API-SECRET-KEY'], base_url='https://api.alpaca.markets', api_version = 'v2')
+tickers = open('/home/Bilal/alpacaBOT/AUTH/Tickers.txt', 'r').read()
 tickers = tickers.upper().split()
 global TICKERS 
 TICKERS = tickers
@@ -37,7 +37,7 @@ def get_minute_data(tickers):
         quotes = quotes[~quotes.index.duplicated(keep='first')]
 
         df = pd.merge(prices, quotes, how= 'inner', left_index=True, right_index= True)
-        df.to_csv('tick_data/{}.csv'.format(ticker))
+        df.to_csv('/home/Bilal/alpacaBOT/tick_data/{}.csv'.format(ticker))
         
     for ticker in tickers:
         save_min_data(ticker)
@@ -45,11 +45,11 @@ def get_minute_data(tickers):
 def get_past30_data(tickers):
     
     def save_30_data(ticker):
-        prices_1 = api.get_trades(str(ticker), start = dt.now().astimezone(timezone('America/New_York')).replace(hour=9, minute=30, second = 10).isoformat(),
-                                        end = dt.now().astimezone(timezone('America/New_York')).replace(hour=9, minute=32, second = 0).isoformat(), 
+        prices_1 = api.get_trades(str(ticker), start = ((dt.now().astimezone(timezone('America/New_York'))) - timedelta(minutes=30)).isoformat(),
+                                        end = ((dt.now().astimezone(timezone('America/New_York'))) - timedelta(minutes=28, seconds = 30)).isoformat(), 
                                         limit = 10000).df[['price']]
-        prices_2 = api.get_trades(str(ticker), start = dt.now().astimezone(timezone('America/New_York')).replace(hour=9, minute=59, second = 0).isoformat(),
-                                        end = dt.now().astimezone(timezone('America/New_York')).replace(hour=10, minute=0, second = 15).isoformat(), 
+        prices_2 = api.get_trades(str(ticker), start = ((dt.now().astimezone(timezone('America/New_York'))) - timedelta(minutes=1, seconds = 30)).isoformat(),
+                                        end = ((dt.now().astimezone(timezone('America/New_York')))).isoformat(), 
                                         limit = 10000).df[['price']]
         
         prices_1.index = pd.to_datetime(prices_1.index, format = '%Y-%m-%d').strftime('%Y-%m-%d %H:%M')
@@ -58,11 +58,11 @@ def get_past30_data(tickers):
         prices = pd.concat([prices_1, prices_2])
         prices = prices[~prices.index.duplicated(keep='first')]
 
-        quotes_1 = api.get_quotes(str(ticker), start = dt.now().astimezone(timezone('America/New_York')).replace(hour=9, minute=30, second = 10).isoformat(),
-                                        end = dt.now().astimezone(timezone('America/New_York')).replace(hour=9, minute=32, second = 10).isoformat(), 
+        quotes_1 = api.get_quotes(str(ticker), start = ((dt.now().astimezone(timezone('America/New_York'))) - timedelta(minutes=30)).isoformat(),
+                                        end = ((dt.now().astimezone(timezone('America/New_York'))) - timedelta(minutes=28, seconds = 30)).isoformat(), 
                                         limit = 10000).df[['ask_price']]
-        quotes_2 = api.get_quotes(str(ticker), start = dt.now().astimezone(timezone('America/New_York')).replace(hour=9, minute=59, second = 0).isoformat(),
-                                        end = dt.now().astimezone(timezone('America/New_York')).replace(hour=10, minute=0, second = 15).isoformat(), 
+        quotes_2 = api.get_quotes(str(ticker), start = ((dt.now().astimezone(timezone('America/New_York'))) - timedelta(minutes=1, seconds = 30)).isoformat(),
+                                        end = ((dt.now().astimezone(timezone('America/New_York')))).isoformat(), 
                                         limit = 10000).df[['ask_price']]
         
         quotes_1.index = pd.to_datetime(quotes_1.index, format = '%Y-%m-%d').strftime('%Y-%m-%d %H:%M')
@@ -72,7 +72,7 @@ def get_past30_data(tickers):
         quotes = quotes[~quotes.index.duplicated(keep='first')]
         
         df = pd.merge(prices, quotes, how= 'inner', left_index=True, right_index= True)
-        df.to_csv('tick_data/{}.csv'.format(ticker))
+        df.to_csv('/home/Bilal/alpacaBOT/tick_data/{}.csv'.format(ticker))
     
     for ticker in tickers:
         save_30_data(ticker)
@@ -83,14 +83,14 @@ def ROC(ask, timeframe):
             rocs = (ask[ask.shape[0] - 1] - ask[0])/(ask[0])
         else:
             rocs = (ask[ask.shape[0] - 1] - ask[ask.shape[0] -2])/(ask[ask.shape[0] - 2])
-        roc.append(rocs)
+        roc.append(rocs*1000)
         return rocs
 
 # Returns a list of most recent ROCs for all tickers
 def return_ROC_list(tickers, timeframe):
     ROC_tickers = []
     for i in range(len(tickers)):
-        df = pd.read_csv('tick_data/{}.csv'.format(tickers[i]))
+        df = pd.read_csv('/home/Bilal/alpacaBOT/tick_data/{}.csv'.format(tickers[i]))
         df.set_index('timestamp', inplace= True)
         df.index = pd.to_datetime(df.index, format ='%Y-%m-%d').strftime('%Y-%m-%d %H:%M')
         ROC_tickers.append(ROC(df['ask_price'], timeframe)) # [-1] forlast value (latest)
@@ -103,17 +103,14 @@ def compare_ask_ltp(tickers, timeframe):
             buy_stock = ''
             ROCs = return_ROC_list(tickers, timeframe)
             max_ROC = max(ROCs)
-            
+
             if max_ROC <= 0:
                 return 0
             max_ROC_index = ROCs.index(max_ROC)
 
             for i in range(len(tickers)):
-                if(len(tickers)==0):
-                    break
                 buy_stock_init = tickers[max_ROC_index]
-
-                df = pd.read_csv('tick_data/{}.csv'.format(buy_stock_init))
+                df = pd.read_csv('/home/Bilal/alpacaBOT/tick_data/{}.csv'.format(buy_stock_init))
                 df.set_index('timestamp', inplace= True)
                 df.index = pd.to_datetime(df.index, format ='%Y-%m-%d').strftime('%Y-%m-%d %H:%M')
 
@@ -146,7 +143,7 @@ def algo(tickers):
     # Calculates ROC
     # Checks for stock with highest ROC and if ask_price > price
     # Returns ticker to buy
-    if os.path.isfile('FirstTrade.csv'):
+    if os.path.isfile('/home/Bilal/alpacaBOT/FirstTrade.csv'):
         timeframe = 1
     else:
         timeframe = 30
@@ -165,8 +162,8 @@ def buy(stock_to_buy: str):
     
     BUY Order Placed for {}: {} Shares at ${}'''.format(stock_to_buy, targetPositionSize, price_stock)
     
-    if os.path.isfile('Orders.csv'):
-        df = pd.read_csv('Orders.csv')
+    if os.path.isfile('/home/Bilal/alpacaBOT/Orders.csv'):
+        df = pd.read_csv('/home/Bilal/alpacaBOT/Orders.csv')
         df.drop(columns= 'Unnamed: 0', inplace = True)
         df.loc[len(df.index)] = [((dt.now()).astimezone(timezone('America/New_York'))).strftime("%H:%M:%S"), stock_to_buy, 'buy',
                                  price_stock, targetPositionSize, targetPositionSize*price_stock, api.get_account().cash] 
@@ -175,14 +172,13 @@ def buy(stock_to_buy: str):
         df[['Time', 'Ticker', 'Type', 'Price', 'Quantity', 'Total', 'Acc Balance']] = ''
         df.loc[len(df.index)] = [((dt.now()).astimezone(timezone('America/New_York'))).strftime("%H:%M:%S"), stock_to_buy, 'buy',
                                  price_stock, targetPositionSize, targetPositionSize*price_stock, api.get_account().cash] 
-    df.to_csv('Orders.csv')
+    df.to_csv('/home/Bilal/alpacaBOT/Orders.csv')
     return mail_content
 
-def sell(current_stock, stock_to_buy):
+def sell(current_stock):
     # sells current_stock
     quantity = float(api.list_positions()[0].qty)    
     sell_price = api.get_last_trade(str(current_stock)).price
-#     api.submit_order(str(current_stock), quantity, 'sell', 'market', 'day')
     api.cancel_all_orders() # cancels all pending (to be filled) orders 
     api.close_position(str(current_stock)) # sells current stock
     
@@ -190,33 +186,30 @@ def sell(current_stock, stock_to_buy):
 
     SELL Order Placed for {}: {} Shares at ${}'''.format(current_stock, quantity, sell_price)
     
-    df = pd.read_csv('Orders.csv')
+    df = pd.read_csv('/home/Bilal/alpacaBOT/Orders.csv')
     df.drop(columns= 'Unnamed: 0', inplace = True)
     df.loc[len(df.index)] = [((dt.now()).astimezone(timezone('America/New_York'))).strftime("%H:%M:%S"), current_stock, 'sell',
                              sell_price, quantity, quantity*sell_price, api.get_account().cash] 
     
 #     with open('Orders.csv', 'a') as f:
 #         df.to_csv(f, header=f.tell()==0)
-    df.to_csv('Orders.csv')
+    df.to_csv('/home/Bilal/alpacaBOT/Orders.csv')
     return mail_content
 
-def check_rets(current_stock, stock_to_buy):
+def check_rets(current_stock):
     # checks returns for stock in portfolio (api.get_positions()[0].symbol)
-    buy_price = float(api.get_position(current_stock).avg_entry_price) * float(api.get_position(current_stock).qty)
-    current_price = float(api.get_position(current_stock).current_price) * float(api.get_position(current_stock).qty)
-    
-#     if (((current_price - buy_price)/(buy_price))* 100 >= 0.01) or (((current_price - buy_price)/(buy_price))* 100 <= -0.01):
-    if ((current_price - buy_price)/(buy_price))* 100 >= 2:
-        mail_content = sell(current_stock, stock_to_buy)
+    returns = float(api.list_positions()[0].unrealized_plpc)*100
+    if (returns >= 2):
+        mail_content = sell(current_stock)
     else: 
         mail_content = 0              
     return mail_content
 
 def mail_alert(mail_content, sleep_time):
     # The mail addresses and password
-    sender_address = 'sender_address@email.com'
-    sender_pass = 'sender_pw'
-    receiver_address = 'receiver_address@email.com'
+    sender_address = 'bilal.alpaca@gmail.com'
+    sender_pass = 'BilalAlpacaBot'
+    receiver_address = 'sharifbilal136@gmail.com'
 
     # Setup MIME
     message = MIMEMultipart()
@@ -240,8 +233,8 @@ def mail_alert(mail_content, sleep_time):
 
 def main():
     
+    # sends mail when bot starts running   
     if api.get_clock().is_open == True:
-    # sends mail when bot starts running
         mail_content = 'The bot started running on {} at {} UTC'.format(dt.now().strftime('%Y-%m-%d'), dt.now().strftime('%H:%M:%S'))
         mail_alert(mail_content, 0)
 
@@ -250,44 +243,38 @@ def main():
         try:
             if api.get_clock().is_open == True:
                 # check if we have made the first ever trade yet, if yes, timeframe = 1 min, else trade at 10:00 am
-                if os.path.isfile('FirstTrade.csv'):
-                    get_minute_data(tickers)
-                    stock_to_buy = algo(tickers)
-
+                if os.path.isfile('/home/Bilal/alpacaBOT/FirstTrade.csv'):
                     if len(api.list_positions()) == 0:
+                        get_minute_data(tickers)
+                        stock_to_buy = algo(tickers)
+
+                        if stock_to_buy == 0:
+                            print('All ROCs are <= 0')
+                            time.sleep(2)
+                            continue
+                        elif stock_to_buy == -1:
+                            print('All Ask < LTP')
+                            time.sleep(2)
+                            continue
+
                         try:
                             if api.get_activities()[0].order_status == 'partially_filled':
                                 api.cancel_all_orders()
                         except:
                             pass
-                        if stock_to_buy == 0:
-                            print('All ROCs are <= 0')
-                            continue
-                        elif stock_to_buy == -1:
-                            print('All Ask < LTP')
-                            continue
                         mail_content = buy(stock_to_buy)
                         mail_alert(mail_content, 5)
                         continue
 
                     else:
                         current_stock = api.list_positions()[0].symbol
-                        mail_content = check_rets(current_stock, stock_to_buy)
+                        mail_content = check_rets(current_stock)
                         if mail_content == 0:
+                            time.sleep(2)
                             continue
                         else:
-                            mail_alert(mail_content, 0)    
-    #                         api.close_all_positions()
-    #                         sell(current_stock, stock_to_buy)
-                            if stock_to_buy == 0:
-                                print('All ROCs are <= 0')
-                                continue
-                            elif stock_to_buy == -1:
-                                print('All Ask < LTP')
-                                continue
-                            mail_content = buy(stock_to_buy)
-                            mail_alert(mail_content, 5)
-                            # time.sleep(5)
+                            mail_alert(mail_content, 0) 
+                            continue
                 else:
                     if ((dt.now().astimezone(timezone('America/New_York')))).strftime('%H:%M:%S') < '10:00:00':
                         time_to_10 = int(str(dt.strptime('10:00:00', '%H:%M:%S') - dt.strptime(((dt.now().astimezone(timezone('America/New_York')))).strftime('%H:%M:%S'), '%H:%M:%S')).split(':')[1])*60 + int(str(dt.strptime('10:00:00', '%H:%M:%S') - dt.strptime(((dt.now().astimezone(timezone('America/New_York')))).strftime('%H:%M:%S'), '%H:%M:%S')).split(':')[2])
@@ -295,7 +282,7 @@ def main():
 
                     get_past30_data(tickers)
                     stock_to_buy = algo(tickers)
-                    
+
                     if stock_to_buy == 0:
                         print('All ROCs are <= 0')
                         continue
@@ -306,16 +293,17 @@ def main():
                     mail_alert(mail_content, 5)
                     df = pd.DataFrame()
                     df['First Stock'] = stock_to_buy
-                    df.to_csv('FirstTrade.csv')
+                    df.to_csv('/home/Bilal/alpacaBOT/FirstTrade.csv')
             else:
                 time.sleep(300)
                 if api.get_clock().is_open == True:
                     continue
                 else:
-                    mail_content = 'The market is closed on {}'.format(dt.now().strftime('%Y-%m-%d'))
+                    mail_content = 'The market is closed now'
                     mail_alert(mail_content, 0)
                     break
-        except:
+        except Exception as e:
+            print(e)
             continue
 
     if api.get_clock().is_open == False:
