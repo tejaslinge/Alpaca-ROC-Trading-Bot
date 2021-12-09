@@ -15,8 +15,8 @@ from datetime import timedelta
 import os.path
 
 key = json.loads(open('AUTH/auth.txt', 'r').read())
-api = alpaca.REST(key['APCA-API-KEY-ID'], key['APCA-API-SECRET-KEY'], base_url='https://paper-api.alpaca.markets', api_version = 'v2')
-tickers = open('TICKERS/my_tickers.txt', 'r').read() #See other options in /TICKERS
+api = alpaca.REST(key['APCA-API-KEY-ID'], key['APCA-API-SECRET-KEY'], base_url='https://api.alpaca.markets', api_version = 'v2')
+tickers = open('AUTH/Tickers.txt', 'r').read()
 tickers = tickers.upper().split()
 global TICKERS 
 TICKERS = tickers
@@ -78,13 +78,11 @@ def get_past30_data(tickers):
         save_30_data(ticker)
 
 def ROC(ask, timeframe):
-        roc = []
         if timeframe == 30:
             rocs = (ask[ask.shape[0] - 1] - ask[0])/(ask[0])
         else:
             rocs = (ask[ask.shape[0] - 1] - ask[ask.shape[0] -2])/(ask[ask.shape[0] - 2])
-        roc.append(rocs*1000)
-        return rocs
+        return rocs*1000
 
 # Returns a list of most recent ROCs for all tickers
 def return_ROC_list(tickers, timeframe):
@@ -177,7 +175,7 @@ def buy(stock_to_buy: str):
 
 def sell(current_stock):
     # sells current_stock
-    quantity = float(api.list_positions()[0].qty)    
+    quantity = float(api.get_position(str(current_stock)).qty)    
     sell_price = api.get_last_trade(str(current_stock)).price
     api.cancel_all_orders() # cancels all pending (to be filled) orders 
     api.close_position(str(current_stock)) # sells current stock
@@ -188,8 +186,7 @@ def sell(current_stock):
     
     df = pd.read_csv('Orders.csv')
     df.drop(columns= 'Unnamed: 0', inplace = True)
-    df.loc[len(df.index)] = [((dt.now()).astimezone(timezone('America/New_York'))).strftime("%H:%M:%S"), current_stock, 'sell',
-                             sell_price, quantity, quantity*sell_price, api.get_account().cash] 
+    df.loc[len(df.index)] = [((dt.now()).astimezone(timezone('America/New_York'))).strftime("%H:%M:%S"), current_stock, 'sell', sell_price, quantity, quantity*sell_price, api.get_account().cash] 
     
 #     with open('Orders.csv', 'a') as f:
 #         df.to_csv(f, header=f.tell()==0)
@@ -198,7 +195,7 @@ def sell(current_stock):
 
 def check_rets(current_stock):
     # checks returns for stock in portfolio (api.get_positions()[0].symbol)
-    returns = float(api.list_positions()[0].unrealized_plpc)*100
+    returns = float(api.get_position(str(current_stock)).unrealized_plpc)*100
     if (returns >= 2):
         mail_content = sell(current_stock)
     else: 
@@ -207,9 +204,9 @@ def check_rets(current_stock):
 
 def mail_alert(mail_content, sleep_time):
     # The mail addresses and password
-    sender_address = 'sender_email'
-    sender_pass = 'sender_email_password'
-    receiver_address = 'receiver_email'
+    sender_address = 'sender_address'
+    sender_pass = 'sender_password'
+    receiver_address = 'receiver_address'
 
     # Setup MIME
     message = MIMEMultipart()
@@ -233,18 +230,23 @@ def mail_alert(mail_content, sleep_time):
 
 def main():
     
-    # sends mail when bot starts running   
     if api.get_clock().is_open == True:
+    # sends mail when bot starts running
         mail_content = 'The bot started running on {} at {} UTC'.format(dt.now().strftime('%Y-%m-%d'), dt.now().strftime('%H:%M:%S'))
         mail_alert(mail_content, 0)
 
     while True:
+        
+        if api.get_account().pattern_day_trader == True:
+            mail_alert('Pattern day trading notification, bot is stopping now', 0)
+            break
+
         tickers = TICKERS
         try:
             if api.get_clock().is_open == True:
                 # check if we have made the first ever trade yet, if yes, timeframe = 1 min, else trade at 10:00 am
                 if os.path.isfile('FirstTrade.csv'):
-                    if len(api.list_positions()) == 0:
+                    if float(api.get_account().cash) > 10:
                         get_minute_data(tickers)
                         stock_to_buy = algo(tickers)
 
@@ -256,6 +258,22 @@ def main():
                             print('All Ask < LTP')
                             time.sleep(2)
                             continue
+                        
+                        # checks if stock_to_buy exists in positions
+                        # doesn't buy if LTP for stock_to_buy > avg_entry_price
+                        else:
+                            num_stocks = len(api.list_positions())
+                            curr_stocks = []
+
+                            if num_stocks != 0:
+                                for i in range(num_stocks):
+                                    curr_stocks.append(api.list_positions()[i])
+                                    
+                                if stock_to_buy in curr_stocks:
+                                    if api.get_last_trade(stock_to_buy).price > float(api.get_position(stock_to_buy).avg_entry_price):
+                                        print('LTP for {} > Average Entry Price'.format(stock_to_buy))
+                                        time.sleep(2)
+                                        continue
 
                         try:
                             if api.get_activities()[0].order_status == 'partially_filled':
@@ -267,14 +285,24 @@ def main():
                         continue
 
                     else:
-                        current_stock = api.list_positions()[0].symbol
-                        mail_content = check_rets(current_stock)
-                        if mail_content == 0:
-                            time.sleep(2)
-                            continue
+                        
+                        num_stocks = len(api.list_positions())
+                        current_stocks = []
+                        mail_content_list = []
+                        
+                        for pos in range(num_stocks):
+                            current_stocks.append(api.list_positions()[pos].symbol)
+                        
+                        for stock in current_stocks:
+                            mail_content = check_rets(stock)
+                            mail_content_list.append(mail_content)
+                        
+                        if any(mail_content_list):
+                            for mail in mail_content_list:
+                                if mail != 0:
+                                    mail_alert(mail, 0)
                         else:
-                            mail_alert(mail_content, 0) 
-                            continue
+                            time.sleep(3)
                 else:
                     if ((dt.now().astimezone(timezone('America/New_York')))).strftime('%H:%M:%S') < '10:00:00':
                         time_to_10 = int(str(dt.strptime('10:00:00', '%H:%M:%S') - dt.strptime(((dt.now().astimezone(timezone('America/New_York')))).strftime('%H:%M:%S'), '%H:%M:%S')).split(':')[1])*60 + int(str(dt.strptime('10:00:00', '%H:%M:%S') - dt.strptime(((dt.now().astimezone(timezone('America/New_York')))).strftime('%H:%M:%S'), '%H:%M:%S')).split(':')[2])
