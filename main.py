@@ -152,7 +152,7 @@ def algo(tickers):
 def buy(stock_to_buy: str):
     
     cashBalance = api.get_account().cash
-    price_stock = api.get_last_trade(str(stock_to_buy)).price
+    price_stock = api.get_latest_trade(str(stock_to_buy)).price
     targetPositionSize = ((float(cashBalance)) / (price_stock)) # Calculates required position size
     api.submit_order(str(stock_to_buy), targetPositionSize, "buy", "market", "day") # Market order to open position    
     
@@ -176,7 +176,7 @@ def buy(stock_to_buy: str):
 def sell(current_stock):
     # sells current_stock
     quantity = float(api.get_position(str(current_stock)).qty)    
-    sell_price = api.get_last_trade(str(current_stock)).price
+    sell_price = api.get_latest_trade(str(current_stock)).price
     api.cancel_all_orders() # cancels all pending (to be filled) orders 
     api.close_position(str(current_stock)) # sells current stock
     
@@ -270,7 +270,7 @@ def main():
                                     curr_stocks.append(api.list_positions()[i])
                                     
                                 if stock_to_buy in curr_stocks:
-                                    if api.get_last_trade(stock_to_buy).price > float(api.get_position(stock_to_buy).avg_entry_price):
+                                    if api.get_latest_trade(stock_to_buy).price > float(api.get_position(stock_to_buy).avg_entry_price):
                                         print('LTP for {} > Average Entry Price'.format(stock_to_buy))
                                         time.sleep(2)
                                         continue
