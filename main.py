@@ -163,12 +163,12 @@ def buy(stock_to_buy: str):
     if os.path.isfile('Orders.csv'):
         df = pd.read_csv('Orders.csv')
         df.drop(columns= 'Unnamed: 0', inplace = True)
-        df.loc[len(df.index)] = [((dt.now()).astimezone(timezone('America/New_York'))).strftime("%H:%M:%S"), stock_to_buy, 'buy',
+        df.loc[len(df.index)] = [((dt.now()).astimezone(timezone('America/New_York'))).strftime("%Y-%m-%d %H:%M:%S"), stock_to_buy, 'buy',
                                  price_stock, targetPositionSize, targetPositionSize*price_stock, api.get_account().cash] 
     else:    
         df = pd.DataFrame()
         df[['Time', 'Ticker', 'Type', 'Price', 'Quantity', 'Total', 'Acc Balance']] = ''
-        df.loc[len(df.index)] = [((dt.now()).astimezone(timezone('America/New_York'))).strftime("%H:%M:%S"), stock_to_buy, 'buy',
+        df.loc[len(df.index)] = [((dt.now()).astimezone(timezone('America/New_York'))).strftime("%Y-%m-%d %H:%M:%S"), stock_to_buy, 'buy',
                                  price_stock, targetPositionSize, targetPositionSize*price_stock, api.get_account().cash] 
     df.to_csv('Orders.csv')
     return mail_content
@@ -186,7 +186,7 @@ def sell(current_stock):
     
     df = pd.read_csv('Orders.csv')
     df.drop(columns= 'Unnamed: 0', inplace = True)
-    df.loc[len(df.index)] = [((dt.now()).astimezone(timezone('America/New_York'))).strftime("%H:%M:%S"), current_stock, 'sell', sell_price, quantity, quantity*sell_price, api.get_account().cash] 
+    df.loc[len(df.index)] = [((dt.now()).astimezone(timezone('America/New_York'))).strftime("%Y-%m-%d %H:%M:%S"), current_stock, 'sell', sell_price, quantity, quantity*sell_price, api.get_account().cash] 
     
 #     with open('Orders.csv', 'a') as f:
 #         df.to_csv(f, header=f.tell()==0)
