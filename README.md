@@ -26,7 +26,7 @@ A HFT Bot built using Alpaca API. Trading strategy implemented in this project:
 ```
 
 
-3. **Get all stock tickers to moniter from the *Tickers.txt* file** 
+3. **Get all stock tickers to monitor from the *Tickers.txt* file** 
 ```
   tickers = open('Tickers.txt', 'r').read()
   tickers = tickers.upper().split()
