@@ -202,43 +202,17 @@ def check_rets(current_stock):
         mail_content = 0              
     return mail_content
 
-def mail_alert(mail_content, sleep_time):
-    # The mail addresses and password
-    sender_address = 'sender_address'
-    sender_pass = 'sender_password'
-    receiver_address = 'receiver_address'
-
-    # Setup MIME
-    message = MIMEMultipart()
-    message['From'] = 'Trading Bot'
-    message['To'] = receiver_address
-    message['Subject'] = 'HFT Second-Bot'
-    
-    # The body and the attachments for the mail
-    message.attach(MIMEText(mail_content, 'plain'))
-
-    # Create SMTP session for sending the mail
-    session = smtplib.SMTP('smtp.gmail.com', 587)  # use gmail with port
-    session.starttls()  # enable security
-
-    # login with mail_id and password
-    session.login(sender_address, sender_pass)
-    text = message.as_string()
-    session.sendmail(sender_address, receiver_address, text)
-    session.quit()
-    time.sleep(sleep_time)
-
 def main():
     
     if api.get_clock().is_open == True:
     # sends mail when bot starts running
         mail_content = 'The bot started running on {} at {} UTC'.format(dt.now().strftime('%Y-%m-%d'), dt.now().strftime('%H:%M:%S'))
-        mail_alert(mail_content, 0)
+        # mail_alert(mail_content, 0)
 
     while True:
         
         if api.get_account().pattern_day_trader == True:
-            mail_alert('Pattern day trading notification, bot is stopping now', 0)
+            # mail_alert('Pattern day trading notification, bot is stopping now', 0)
             break
 
         tickers = TICKERS
@@ -281,7 +255,7 @@ def main():
                         except:
                             pass
                         mail_content = buy(stock_to_buy)
-                        mail_alert(mail_content, 5)
+                        # mail_alert(mail_content, 5)
                         continue
 
                     else:
@@ -300,7 +274,8 @@ def main():
                         if any(mail_content_list):
                             for mail in mail_content_list:
                                 if mail != 0:
-                                    mail_alert(mail, 0)
+                                    # mail_alert(mail, 0)
+                                    pass
                         else:
                             time.sleep(3)
                 else:
@@ -318,7 +293,7 @@ def main():
                         print('All Ask < LTP')
                         continue
                     mail_content = buy(stock_to_buy)
-                    mail_alert(mail_content, 5)
+                    # mail_alert(mail_content, 5)
                     df = pd.DataFrame()
                     df['First Stock'] = stock_to_buy
                     df.to_csv('FirstTrade.csv')
@@ -328,7 +303,7 @@ def main():
                     continue
                 else:
                     mail_content = 'The market is closed now'
-                    mail_alert(mail_content, 0)
+                    # mail_alert(mail_content, 0)
                     break
         except Exception as e:
             print(e)
@@ -337,7 +312,7 @@ def main():
     if api.get_clock().is_open == False:
         # sends mail when bot starts running
         mail_content = 'The bot stopped running on {} at {} UTC'.format(dt.now().strftime('%Y-%m-%d'), dt.now().strftime('%H:%M:%S'))
-        mail_alert(mail_content, 0)
+        # mail_alert(mail_content, 0)
             
 if __name__ == '__main__':
     main()
