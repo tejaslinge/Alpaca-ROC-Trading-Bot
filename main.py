@@ -1,18 +1,15 @@
 import pandas as pd
-import datetime
 from datetime import datetime as dt
 from pytz import timezone
 import time
-
+import mail_auth as mail
 import alpaca_trade_api as alpaca
 import json
 
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-
 from datetime import timedelta
 import os.path
+
+from requests import HTTPError
 
 key = json.loads(open('AUTH/auth.txt', 'r').read())
 api = alpaca.REST(key['APCA-API-KEY-ID'], key['APCA-API-SECRET-KEY'], base_url='https://api.alpaca.markets', api_version = 'v2')
@@ -202,17 +199,34 @@ def check_rets(current_stock):
         mail_content = 0              
     return mail_content
 
+def alert_user(message):
+    try:
+        to = "reciever_email"
+        from_ = "sender_email"
+        subject = "ALERT"
+        # Creating the message
+        message_to_send = mail.create_message(from_, to, subject, message)
+
+        # Sending the message
+        result = mail.send_message("me", message_to_send)
+        print('Message sent')
+        return result
+
+    except HTTPError as error:
+        print(f'An error occurred: {error}')
+
+
 def main():
     
     if api.get_clock().is_open == True:
     # sends mail when bot starts running
         mail_content = 'The bot started running on {} at {} UTC'.format(dt.now().strftime('%Y-%m-%d'), dt.now().strftime('%H:%M:%S'))
-        # mail_alert(mail_content, 0)
+        alert_user(mail_content)
 
     while True:
         
         if api.get_account().pattern_day_trader == True:
-            # mail_alert('Pattern day trading notification, bot is stopping now', 0)
+            alert_user('Pattern day trading notification, bot is stopping now')
             break
 
         tickers = TICKERS
@@ -255,7 +269,7 @@ def main():
                         except:
                             pass
                         mail_content = buy(stock_to_buy)
-                        # mail_alert(mail_content, 5)
+                        alert_user(mail_content)
                         continue
 
                     else:
@@ -274,7 +288,7 @@ def main():
                         if any(mail_content_list):
                             for mail in mail_content_list:
                                 if mail != 0:
-                                    # mail_alert(mail, 0)
+                                    alert_user(mail)
                                     pass
                         else:
                             time.sleep(3)
@@ -293,7 +307,7 @@ def main():
                         print('All Ask < LTP')
                         continue
                     mail_content = buy(stock_to_buy)
-                    # mail_alert(mail_content, 5)
+                    alert_user(mail_content)
                     df = pd.DataFrame()
                     df['First Stock'] = stock_to_buy
                     df.to_csv('FirstTrade.csv')
@@ -303,7 +317,7 @@ def main():
                     continue
                 else:
                     mail_content = 'The market is closed now'
-                    # mail_alert(mail_content, 0)
+                    alert_user(mail_content)
                     break
         except Exception as e:
             print(e)
@@ -312,7 +326,7 @@ def main():
     if api.get_clock().is_open == False:
         # sends mail when bot starts running
         mail_content = 'The bot stopped running on {} at {} UTC'.format(dt.now().strftime('%Y-%m-%d'), dt.now().strftime('%H:%M:%S'))
-        # mail_alert(mail_content, 0)
+        alert_user(mail_content)
             
 if __name__ == '__main__':
     main()
